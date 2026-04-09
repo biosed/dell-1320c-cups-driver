@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <signal.h>
 
 #define MAX_FILTERS  16
 #define MAX_PATH_LEN 2048
