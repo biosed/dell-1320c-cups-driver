@@ -1,5 +1,4 @@
 CC ?= cc
-CFLAGS ?= -O2 -Wall -Wextra -std=c99
 CPPFLAGS ?=
 LDFLAGS ?=
 CUPS_CONFIG ?= cups-config
@@ -11,13 +10,14 @@ ARCH := $(shell uname -m)
 
 # Platform defaults
 ifeq ($(OS),Darwin)
+  CFLAGS ?= -O2 -Wall -Wextra -std=gnu99
   PREFIX ?= /Library/Printers/Dell
   PPD_DIR ?= /Library/Printers/PPDs/Dell
   SHA256SUM := shasum -a 256
 else
+  CFLAGS ?= -O2 -Wall -Wextra -std=c99 -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L
   PREFIX ?= /opt/Dell1320
   PPD_DIR ?= /usr/share/ppd/Dell
-  CFLAGS += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L
   SHA256SUM := sha256sum
 endif
 
