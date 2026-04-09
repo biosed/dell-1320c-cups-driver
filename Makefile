@@ -10,7 +10,7 @@ ARCH := $(shell uname -m)
 
 # Platform defaults
 ifeq ($(OS),Darwin)
-  CFLAGS ?= -O2 -Wall -Wextra -std=gnu99
+  CFLAGS ?= -O2 -Wall -Wextra -std=c99 -D_DARWIN_C_SOURCE
   PREFIX ?= /Library/Printers/Dell
   PPD_DIR ?= /Library/Printers/PPDs/Dell
   SHA256SUM := shasum -a 256
