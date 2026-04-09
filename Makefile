@@ -2,7 +2,7 @@ CC ?= cc
 CFLAGS ?= -O2 -Wall -Wextra -std=c99
 CPPFLAGS ?=
 LDFLAGS ?=
-PKG_CONFIG ?= pkg-config
+CUPS_CONFIG ?= cups-config
 GS ?= gs
 VERSION ?= 0.1.1
 
@@ -22,8 +22,8 @@ else
   SHA256SUM := sha256sum
 endif
 
-CUPS_CFLAGS := $(shell $(PKG_CONFIG) --cflags cups 2>/dev/null)
-CUPS_LIBS := $(shell $(PKG_CONFIG) --libs cups 2>/dev/null || printf '%s' '-lcups')
+CUPS_CFLAGS := $(shell $(CUPS_CONFIG) --cflags 2>/dev/null)
+CUPS_LIBS := $(shell $(CUPS_CONFIG) --libs 2>/dev/null || printf '%s' '-lcups')
 
 BINDIR := bin
 SRCDIR := src
@@ -37,8 +37,7 @@ all: check-deps $(addprefix $(BINDIR)/,$(FILTERS))
 
 check-deps:
 	@command -v $(CC) >/dev/null 2>&1 || { echo "Missing compiler: $(CC)" >&2; exit 1; }
-	@command -v $(PKG_CONFIG) >/dev/null 2>&1 || { echo "Missing pkg-config" >&2; exit 1; }
-	@$(PKG_CONFIG) --exists cups || { echo "Missing CUPS development files (pkg-config cups)" >&2; exit 1; }
+	@command -v $(CUPS_CONFIG) >/dev/null 2>&1 || { echo "Missing cups-config (install CUPS development files)" >&2; exit 1; }
 	@command -v $(GS) >/dev/null 2>&1 || { echo "Missing Ghostscript runtime ($(GS)) required by scripts/FXM_PS2PM" >&2; exit 1; }
 
 $(BINDIR):

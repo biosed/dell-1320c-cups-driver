@@ -13,7 +13,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            deps: sudo apt-get update && sudo apt-get install -y pkg-config libcups2-dev ghostscript
+            deps: sudo apt-get update && sudo apt-get install -y libcups2-dev ghostscript
           - os: macos-latest
             deps: brew install cups ghostscript
     runs-on: ${{ matrix.os }}

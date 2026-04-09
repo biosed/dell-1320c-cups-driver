@@ -26,16 +26,16 @@ Included filters:
 
 ### Linux
 
-Dependencies: `gcc`, `pkg-config`, CUPS development headers, Ghostscript.
+Dependencies: C compiler, CUPS development headers, Ghostscript.
 
 Debian/Ubuntu:
 ```bash
-sudo apt-get install build-essential pkg-config libcups2-dev ghostscript
+sudo apt-get install build-essential libcups2-dev ghostscript
 ```
 
 Fedora:
 ```bash
-sudo dnf install gcc make pkg-config cups-devel ghostscript
+sudo dnf install gcc make cups-devel ghostscript
 ```
 
 Then:
