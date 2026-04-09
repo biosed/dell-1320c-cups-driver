@@ -7,6 +7,8 @@ PPD_DIR ?= /usr/share/ppd/Dell
 DESTDIR ?=
 PKG_CONFIG ?= pkg-config
 GS ?= gs
+VERSION ?= 0.1.0
+ARCH ?= $(shell uname -m)
 
 CUPS_CFLAGS := $(shell $(PKG_CONFIG) --cflags cups 2>/dev/null)
 CUPS_LIBS := $(shell $(PKG_CONFIG) --libs cups 2>/dev/null || printf '%s' '-lcups')
@@ -14,6 +16,8 @@ CUPS_LIBS := $(shell $(PKG_CONFIG) --libs cups 2>/dev/null || printf '%s' '-lcup
 BINDIR := bin
 SRCDIR := src
 SCRIPTDIR := scripts
+DISTDIR := dist
+DISTNAME := dell-1320c-cups-driver-linux-$(ARCH)-v$(VERSION)
 
 FILTERS := FXM_PF FXM_MF FXM_PM2FXR FXM_SBP FXM_PR FXM_CC FXM_ALC FXM_HBPL
 
@@ -64,9 +68,19 @@ install: all
 	install -m 755 $(BINDIR)/FXM_ALC $(DESTDIR)$(PREFIX)/filter/FXM_ALC
 	install -m 755 $(BINDIR)/FXM_HBPL $(DESTDIR)$(PREFIX)/filter/FXM_HBPL
 	install -m 755 $(SCRIPTDIR)/FXM_PS2PM $(DESTDIR)$(PREFIX)/filter/FXM_PS2PM
-	install -m 644 ppd/Dell-1320c-native.ppd $(DESTDIR)$(PPD_DIR)/Dell-1320c-native.ppd
+	install -m 644 ppd/Dell-1320c.ppd $(DESTDIR)$(PPD_DIR)/Dell-1320c.ppd
+
+dist: all
+	rm -rf $(DISTDIR)/$(DISTNAME)
+	mkdir -p $(DISTDIR)/$(DISTNAME)/bin $(DISTDIR)/$(DISTNAME)/ppd $(DISTDIR)/$(DISTNAME)/scripts
+	cp -a $(BINDIR)/. $(DISTDIR)/$(DISTNAME)/bin/
+	cp -a $(SCRIPTDIR)/FXM_PS2PM $(DISTDIR)/$(DISTNAME)/scripts/
+	cp -a ppd/Dell-1320c.ppd $(DISTDIR)/$(DISTNAME)/ppd/
+	cp -a README.md INSTALL.md install.sh $(DISTDIR)/$(DISTNAME)/
+	tar -C $(DISTDIR) -czf $(DISTDIR)/$(DISTNAME).tar.gz $(DISTNAME)
+	sha256sum $(DISTDIR)/$(DISTNAME).tar.gz > $(DISTDIR)/$(DISTNAME).tar.gz.sha256
 
 clean:
-	rm -rf $(BINDIR)
+	rm -rf $(BINDIR) $(DISTDIR)
 
-.PHONY: all check-deps install clean
+.PHONY: all check-deps install dist clean

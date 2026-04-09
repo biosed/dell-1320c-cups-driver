@@ -43,10 +43,12 @@ make check-deps
 sudo make install
 ```
 
+Then add the printer from your desktop printer settings / CUPS GUI, or see `INSTALL.md` for command-line setup.
+
 Default install paths:
 
 - filters: `/opt/Dell1320/filter`
-- PPD: `/usr/share/ppd/Dell/Dell-1320c-native.ppd`
+- PPD: `/usr/share/ppd/Dell/Dell-1320c.ppd`
 
 Override with:
 
@@ -92,8 +94,9 @@ The full active print path was sampled during printing and completed without `qe
 - `FXM_PF` in this tree is a clean-room implementation based on observed behavior, not recovered vendor source.
 - `FXM_HBPL` in this tree is the working clean-room `fxr2hbpl` implementation under the expected Dell filter name.
 - `FXM_PS2PM` remains a shell script wrapper around Ghostscript.
-- The included PPD is the native Dell/Fuji-Xerox style PPD, not the older foo2-based adapted PPD.
+- The included PPD is the single canonical PPD for this repo.
 - This tree is intended to contain only the working native path, not the reverse-engineering artifacts.
+- Linux desktop users should treat this like a normal CUPS driver package: install first, then add the printer in the GUI.
 
 ## Notes
 
