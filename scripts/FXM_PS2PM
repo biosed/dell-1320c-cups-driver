@@ -1,0 +1,23 @@
+#!/bin/sh
+prefix=/usr
+exec_prefix=${prefix}
+bindir=${exec_prefix}/bin
+
+GS_FONTPATH="$CUPS_FONTPATH"
+export GS_FONTPATH
+
+gsopts="-dQUIET -dDEBUG -dNOSAFER -dNOPAUSE -dBATCH"
+gsopts="$gsopts -dNOMEDIAATTRS -sDEVICE=ppmraw -sstdout=%stderr"
+
+profile=""
+for option in $5; do
+    case $option in
+        profile=*) profile="-scupsProfile=$(echo $option | awk -F= '{print $2}')" ;;
+    esac
+done
+
+if test -z "$6"; then
+    $bindir/gs $gsopts -sOUTPUTFILE="%stdout" $profile -
+else
+    cat "$6" | $bindir/gs $gsopts -sOUTPUTFILE="%stdout" $profile -
+fi
