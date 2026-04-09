@@ -1,14 +1,26 @@
-CC ?= gcc
-CFLAGS ?= -O2 -Wall -Wextra -std=c99 -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L
+CC ?= cc
+CFLAGS ?= -O2 -Wall -Wextra -std=c99
 CPPFLAGS ?=
 LDFLAGS ?=
-PREFIX ?= /opt/Dell1320
-PPD_DIR ?= /usr/share/ppd/Dell
-DESTDIR ?=
 PKG_CONFIG ?= pkg-config
 GS ?= gs
-VERSION ?= 0.1.0
-ARCH ?= $(shell uname -m)
+VERSION ?= 0.1.1
+
+OS := $(shell uname -s)
+ARCH := $(shell uname -m)
+
+# Platform defaults
+ifeq ($(OS),Darwin)
+  PREFIX ?= /Library/Printers/Dell
+  PPD_DIR ?= /Library/Printers/PPDs/Dell
+  CFLAGS += -D_POSIX_C_SOURCE=200809L
+  SHA256SUM := shasum -a 256
+else
+  PREFIX ?= /opt/Dell1320
+  PPD_DIR ?= /usr/share/ppd/Dell
+  CFLAGS += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200809L
+  SHA256SUM := sha256sum
+endif
 
 CUPS_CFLAGS := $(shell $(PKG_CONFIG) --cflags cups 2>/dev/null)
 CUPS_LIBS := $(shell $(PKG_CONFIG) --libs cups 2>/dev/null || printf '%s' '-lcups')
@@ -17,7 +29,7 @@ BINDIR := bin
 SRCDIR := src
 SCRIPTDIR := scripts
 DISTDIR := dist
-DISTNAME := dell-1320c-cups-driver-linux-$(ARCH)-v$(VERSION)
+DISTNAME := dell-1320c-cups-driver-$(OS)-$(ARCH)-v$(VERSION)
 
 FILTERS := FXM_PF FXM_MF FXM_PM2FXR FXM_SBP FXM_PR FXM_CC FXM_ALC FXM_HBPL
 
@@ -78,9 +90,11 @@ dist: all
 	cp -a ppd/Dell-1320c.ppd $(DISTDIR)/$(DISTNAME)/ppd/
 	cp -a README.md INSTALL.md install.sh $(DISTDIR)/$(DISTNAME)/
 	tar -C $(DISTDIR) -czf $(DISTDIR)/$(DISTNAME).tar.gz $(DISTNAME)
-	sha256sum $(DISTDIR)/$(DISTNAME).tar.gz > $(DISTDIR)/$(DISTNAME).tar.gz.sha256
+	$(SHA256SUM) $(DISTDIR)/$(DISTNAME).tar.gz > $(DISTDIR)/$(DISTNAME).tar.gz.sha256
 
 clean:
 	rm -rf $(BINDIR) $(DISTDIR)
+
+DESTDIR ?=
 
 .PHONY: all check-deps install dist clean

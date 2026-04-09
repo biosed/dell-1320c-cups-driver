@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            deps: sudo apt-get update && sudo apt-get install -y libcups2-dev ghostscript
+          - os: macos-latest
+            deps: brew install cups ghostscript
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ matrix.deps }}
+
+      - name: Build
+        run: make all
+
+      - name: Package
+        run: make dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dell-1320c-driver-${{ matrix.os }}
+          path: dist/*.tar.gz

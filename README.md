@@ -1,6 +1,10 @@
 # Dell 1320c Native Driver
 
+[![Build](https://github.com/biosed/dell-1320c-cups-driver/actions/workflows/build.yml/badge.svg)](https://github.com/biosed/dell-1320c-cups-driver/actions/workflows/build.yml)
+
 Native rebuild of the Dell 1320c / Fuji Xerox DocuPrint C525A CUPS filter chain.
+
+Builds on Linux (x86_64, aarch64) and macOS (arm64).
 
 This tree contains the working native path extracted from a larger reverse-engineering workspace and reduced to the distributable sources needed to build and install the driver.
 
@@ -18,42 +22,79 @@ Included filters:
 
 `FXM_HBPL` is built from the working `fxr2hbpl` implementation and installed under the expected Dell filter name.
 
-## Build
+## Build from source
 
-Dependencies:
+### Linux
 
-- C compiler (`gcc` or compatible)
-- `pkg-config`
-- CUPS development headers/libs (`pkg-config cups`)
-- Ghostscript runtime (`gs`) for `FXM_PS2PM`
+Dependencies: `gcc`, `pkg-config`, CUPS development headers, Ghostscript.
 
+Debian/Ubuntu:
+```bash
+sudo apt-get install build-essential pkg-config libcups2-dev ghostscript
+```
+
+Fedora:
+```bash
+sudo dnf install gcc make pkg-config cups-devel ghostscript
+```
+
+Then:
 ```bash
 make
-```
-
-You can also verify prerequisites explicitly:
-
-```bash
-make check-deps
-```
-
-## Install
-
-```bash
 sudo make install
 ```
 
-Then add the printer from your desktop printer settings / CUPS GUI, or see `INSTALL.md` for command-line setup.
+Installs filters to `/opt/Dell1320/filter` and PPD to `/usr/share/ppd/Dell/Dell-1320c.ppd`.
 
-Default install paths:
+### macOS
 
-- filters: `/opt/Dell1320/filter`
-- PPD: `/usr/share/ppd/Dell/Dell-1320c.ppd`
+Dependencies (via Homebrew):
+```bash
+brew install cups ghostscript
+```
 
-Override with:
+Then:
+```bash
+make
+sudo make install
+```
+
+Installs filters to `/Library/Printers/Dell/filter` and PPD to `/Library/Printers/PPDs/Dell/Dell-1320c.ppd`.
+
+### Pre-built binaries
+
+Download the tarball for your platform from the [latest release](https://github.com/biosed/dell-1320c-cups-driver/releases/latest), extract it, and run `sudo make install` from the extracted directory.
+
+### Custom paths
 
 ```bash
 make PREFIX=/custom/filter/root PPD_DIR=/custom/ppd/dir
+```
+
+## Add the printer
+
+### Linux
+
+Open your desktop printer settings or the CUPS web UI, add the printer, and select the Dell 1320c PPD.
+
+Or from the command line:
+```bash
+sudo lpadmin -p Dell1320c -E \
+  -v "usb://Dell/Color%20Laser%201320c?serial=YOUR_SERIAL" \
+  -P /usr/share/ppd/Dell/Dell-1320c.ppd
+sudo lpadmin -p Dell1320c -o Option1=1Tray-S -o FXInputSlot=1stTray-S
+```
+
+### macOS
+
+Open **System Settings > Printers & Scanners**, add the printer, and select the Dell 1320c PPD when prompted for a driver.
+
+Or from the command line:
+```bash
+sudo lpadmin -p Dell1320c -E \
+  -v "usb://Dell/Color%20Laser%201320c?serial=YOUR_SERIAL" \
+  -P /Library/Printers/PPDs/Dell/Dell-1320c.ppd
+sudo lpadmin -p Dell1320c -o Option1=1Tray-S -o FXInputSlot=1stTray-S
 ```
 
 ## Validation
