@@ -13,7 +13,6 @@ ARCH := $(shell uname -m)
 ifeq ($(OS),Darwin)
   PREFIX ?= /Library/Printers/Dell
   PPD_DIR ?= /Library/Printers/PPDs/Dell
-  CFLAGS += -D_POSIX_C_SOURCE=200809L
   SHA256SUM := shasum -a 256
 else
   PREFIX ?= /opt/Dell1320
