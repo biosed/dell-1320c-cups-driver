@@ -6,6 +6,8 @@ Native rebuild of the Dell 1320c / Fuji Xerox DocuPrint C525A CUPS filter chain.
 
 Builds on Linux (x86_64, aarch64) and macOS (arm64).
 
+Note, Linux aarch64 means you can run this on a raspberry pi, I'm using a Pi Zero and now have wireless printing!
+
 This tree contains the working native path extracted from a larger reverse-engineering workspace and reduced to the distributable sources needed to build and install the driver.
 
 Included filters:
