@@ -285,7 +285,7 @@ main(int argc, char *argv[])
             ph[off++] = 0x93; ph[off++] = 0xa1;
             ph[off++] = 0x01;                           /* unknown */
             ph[off++] = 0x94; ph[off++] = 0xa1;
-            ph[off++] = 0x02;                           /* color mode */
+            ph[off++] = 0x00;                           /* color mode: 0 matches vendor capture, was hardcoded 0x02 */
             ph[off++] = 0x95; ph[off++] = 0xc2;
             ph[off++] = 0x00; ph[off++] = 0x00;
             ph[off++] = 0x00; ph[off++] = 0x00;        /* paper dims zeros */
