@@ -38,7 +38,3 @@ Flow: `FXM_PF` (saves PS stdin to tempfile, merges `%%BeginFeature: *Key Value` 
 - No test suite. Validation precedent (README): byte-compare filter output against vendor i386 filters on identical intermediate inputs, ignoring time-dependent PJL fields (`DATE`, `TIME`, `@HOAD`); plus real-printer color/mono/test-page jobs with no `qemu-i386-static` in the process list.
 - `bin/` and `dist/` are gitignored build outputs; don't commit them.
 
-## Sibling directories (don't confuse them)
-
-- `~/dell1320c` (no hyphens) is the reverse-engineering workspace: Ghidra decompilations (`decompiled_*.c`), vendor i386 oracle binaries (`FXM_ALC.i386`, …), stage captures (`step*_*.bin`), harnesses (`alc_harness.py`, `sq21_*.py`), core dumps. Reference-only: use its oracle binaries/captures for byte-compare validation, but never edit there and never copy vendor-decompiled code into this repo (clean-room `FXM_PF`/`FXM_HBPL` status depends on it).
-- `~/dell1320c-driver` is a duplicate clone of this same repo (same remote, same HEAD; verified identical tracked sources). Work in one clone only — check `git status`/`git log` if unsure which is fresh, and don't let them diverge.
