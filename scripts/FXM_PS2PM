@@ -9,12 +9,20 @@ export GS_FONTPATH
 gsopts="-dQUIET -dDEBUG -dNOSAFER -dNOPAUSE -dBATCH"
 gsopts="$gsopts -dNOMEDIAATTRS -sDEVICE=ppmraw -sstdout=%stderr"
 
+# Render at the resolution FXM_PM2FXR assumes (from the FXOutputMode PPD
+# option, default 600x600). Without -r, Ghostscript rasterizes at 72dpi and
+# the output prints ~8x smaller, since FXM_PM2FXR only crops oversized
+# input and never scales up undersized input.
+resolution="600"
 profile=""
 for option in $5; do
     case $option in
+        FXOutputMode=300x300) resolution="300" ;;
+        FXOutputMode=*) resolution="600" ;;
         profile=*) profile="-scupsProfile=$(echo $option | awk -F= '{print $2}')" ;;
     esac
 done
+gsopts="$gsopts -r$resolution"
 
 if test -z "$6"; then
     $bindir/gs $gsopts -sOUTPUTFILE="%stdout" $profile -
