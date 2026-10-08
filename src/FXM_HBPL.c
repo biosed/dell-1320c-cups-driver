@@ -28,8 +28,8 @@
 /* ------------------------------------------------------------------ */
 
 typedef struct {
-    uint32_t width;       /* offset  0: page width in points */
-    uint32_t height;      /* offset  4: page height in points */
+    uint32_t width;       /* offset  0: printable width in pixels (600dpi) */
+    uint32_t height;      /* offset  4: printable height in pixels (600dpi) */
     uint32_t field_08;    /* offset  8: 32 */
     uint32_t field_0c;    /* offset 12: 1785 */
     uint32_t dataSize;    /* offset 16: compressed data size */
@@ -42,29 +42,64 @@ typedef struct {
 } FXRasterHeader;
 
 /* ------------------------------------------------------------------ */
-/* Paper code mapping (width x height in points -> HBPL paper code)   */
+/* Paper code mapping (PageSize name -> HBPL paper code)              */
+/*                                                                    */
+/* Codes match the vendor FXM_HBPL's GetPageSizeSetting(), which      */
+/* writes them into the 0x94 page-header field (foo2hbpl1 agrees on   */
+/* the common sizes: its value >> 1).                                 */
 /* ------------------------------------------------------------------ */
 
 static int
-paper_code(uint32_t w, uint32_t h)
+paper_code_by_name(const char *name)
 {
-    /* Letter 612x792 or 600x842 */
-    if ((w == 612 && h == 792) || (w == 600 && h == 842))
+    if (strcmp(name, "Letter") == 0)
         return 0;
-    /* A4 595x842 */
-    if (w == 595 && h == 842)
-        return 4;
-    /* Legal 612x1008 */
-    if (w == 612 && h == 1008)
+    if (strcmp(name, "Legal") == 0)
         return 1;
-    /* Executive 522x756 */
-    if (w == 522 && h == 756)
-        return 5;
-    /* B5 516x729 */
-    if (w == 516 && h == 729)
-        return 8;
-    /* Default to Letter */
-    return 0;
+    if (strcmp(name, "A4") == 0)
+        return 2;
+    if (strcmp(name, "Executive") == 0)
+        return 3;
+    if (strcmp(name, "B5") == 0)          /* JIS B5, 182x257mm */
+        return 11;
+    if (strcmp(name, "A5") == 0)
+        return 15;
+    if (strcmp(name, "FXPostcard") == 0)
+        return 13;
+    if (strcmp(name, "FanFoldGermanLegal") == 0)   /* Folio */
+        return 0xcd;
+    if (strcmp(name, "Custom") == 0)
+        return 0xff;
+    return 2;   /* vendor defaults unrecognised names to A4 */
+}
+
+/*
+ * Fallback when no PageSize is marked: the raster header carries the
+ * printable area in 600dpi pixels (not points), so convert and pick the
+ * nearest page whose full size is at most ~0.5in larger in each axis.
+ */
+static int
+paper_code_by_size(uint32_t w, uint32_t h)
+{
+    static const struct { int pts_w, pts_h, code; } sizes[] = {
+        { 283, 420, 13 },   /* Japanese Postcard */
+        { 420, 595, 15 },   /* A5 */
+        { 516, 729, 11 },   /* B5 (JIS) */
+        { 522, 756, 3 },    /* Executive */
+        { 595, 842, 2 },    /* A4 */
+        { 612, 792, 0 },    /* Letter */
+        { 612, 936, 0xcd }, /* Folio */
+        { 612, 1008, 1 },   /* Legal */
+    };
+    double pw = w * 72.0 / 600.0, ph = h * 72.0 / 600.0;
+    size_t i;
+
+    for (i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+        double dw = sizes[i].pts_w - pw, dh = sizes[i].pts_h - ph;
+        if (dw >= -2 && dw <= 36 && dh >= -2 && dh <= 36)
+            return sizes[i].code;
+    }
+    return 0;   /* Letter */
 }
 
 /* ------------------------------------------------------------------ */
@@ -149,23 +184,30 @@ write_pjl(FILE *out, const char *user, const char *title, int copies)
     fprintf(out, "@PJL ENTER LANGUAGE=HBPL\n");
 }
 
-static int
-hbpl_input_slot(const char *options)
+/*
+ * Read the job's FXInputSlot and PageSize from the PPD in one pass.
+ * Without a PPD, *slot is 0 and *paper is -1 (caller falls back to the
+ * raster size).
+ */
+static void
+hbpl_job_options(const char *options, int *slot, int *paper)
 {
     ppd_file_t *ppd;
     cups_option_t *opts = NULL;
     int num_opts = 0;
     ppd_choice_t *choice;
-    int slot = 0;
     const char *ppd_path = getenv("PPD");
 
+    *slot = 0;
+    *paper = -1;
+
     if (!ppd_path) {
-        return 0;
+        return;
     }
 
     ppd = ppdOpenFile(ppd_path);
     if (!ppd) {
-        return 0;
+        return;
     }
 
     ppdMarkDefaults(ppd);
@@ -179,21 +221,23 @@ hbpl_input_slot(const char *options)
     choice = ppdFindMarkedChoice(ppd, "FXInputSlot");
     if (choice != NULL) {
         if (strcmp(choice->choice, "1stTray-S") == 0) {
-            slot = 2;
+            *slot = 2;
         } else if (strcmp(choice->choice, "1stTray-H") == 0) {
-            slot = 2;
+            *slot = 2;
         } else if (strcmp(choice->choice, "2ndTray-H") == 0) {
-            slot = 3;
-        } else {
-            slot = 0;
+            *slot = 3;
         }
+    }
+
+    choice = ppdFindMarkedChoice(ppd, "PageSize");
+    if (choice != NULL) {
+        *paper = paper_code_by_name(choice->choice);
     }
 
     if (opts) {
         cupsFreeOptions(num_opts, opts);
     }
     ppdClose(ppd);
-    return slot;
 }
 
 /* ------------------------------------------------------------------ */
@@ -210,6 +254,7 @@ main(int argc, char *argv[])
     const char *options = "";
     int copies = 1;
     int input_slot = 0;
+    int job_paper_code = -1;
     FXRasterHeader hdr;
     uint32_t page_num = 0;
     unsigned char *data_buf = NULL;
@@ -227,7 +272,7 @@ main(int argc, char *argv[])
     copies = atoi(argv[4]);
     if (copies < 1) copies = 1;
     options = argv[5];
-    input_slot = hbpl_input_slot(options);
+    hbpl_job_options(options, &input_slot, &job_paper_code);
 
     if (argc >= 7 && argv[6] && argv[6][0]) {
         in = fopen(argv[6], "rb");
@@ -274,18 +319,20 @@ main(int argc, char *argv[])
         /* --- Page header (78 bytes) --- */
         {
             unsigned char ph[78];
-            int pc = paper_code(hdr.width, hdr.height);
+            int pc = job_paper_code >= 0
+                     ? job_paper_code
+                     : paper_code_by_size(hdr.width, hdr.height);
             int off = 0;
 
             ph[off++] = 0x43;                          /* page begin */
             ph[off++] = 0x91; ph[off++] = 0xa1;
-            ph[off++] = (unsigned char)pc;              /* paper code */
+            ph[off++] = 0x00;                           /* matches vendor capture */
             ph[off++] = 0x92; ph[off++] = 0xa1;
             ph[off++] = 0x02;                           /* vendor page attribute */
             ph[off++] = 0x93; ph[off++] = 0xa1;
             ph[off++] = 0x01;                           /* unknown */
             ph[off++] = 0x94; ph[off++] = 0xa1;
-            ph[off++] = 0x00;                           /* color mode: 0 matches vendor capture, was hardcoded 0x02 */
+            ph[off++] = (unsigned char)pc;              /* paper size: 0=Letter, 2=A4 (GetPageSizeSetting) */
             ph[off++] = 0x95; ph[off++] = 0xc2;
             ph[off++] = 0x00; ph[off++] = 0x00;
             ph[off++] = 0x00; ph[off++] = 0x00;        /* paper dims zeros */
