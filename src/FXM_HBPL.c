@@ -226,6 +226,8 @@ hbpl_job_options(const char *options, int *slot, int *paper)
             *slot = 2;
         } else if (strcmp(choice->choice, "2ndTray-H") == 0) {
             *slot = 3;
+        } else if (strcmp(choice->choice, "BypassTray") == 0) {
+            *slot = 1;
         }
     }
 
@@ -328,7 +330,7 @@ main(int argc, char *argv[])
             ph[off++] = 0x91; ph[off++] = 0xa1;
             ph[off++] = 0x00;                           /* matches vendor capture */
             ph[off++] = 0x92; ph[off++] = 0xa1;
-            ph[off++] = 0x02;                           /* vendor page attribute */
+            ph[off++] = (unsigned char)input_slot;      /* input slot: 0=Auto, 1=Bypass, 2=Tray1, 3=Tray2 */
             ph[off++] = 0x93; ph[off++] = 0xa1;
             ph[off++] = 0x01;                           /* unknown */
             ph[off++] = 0x94; ph[off++] = 0xa1;
@@ -337,7 +339,7 @@ main(int argc, char *argv[])
             ph[off++] = 0x00; ph[off++] = 0x00;
             ph[off++] = 0x00; ph[off++] = 0x00;        /* paper dims zeros */
             ph[off++] = 0x96; ph[off++] = 0xa1;
-            ph[off++] = (unsigned char)input_slot;      /* input slot */
+            ph[off++] = 0x03;                           /* constant in vendor output */
             ph[off++] = 0x97; ph[off++] = 0xc3;
             ph[off++] = 0x5e; ph[off++] = 0x00;        /* 600dpi = 0x005e */
             ph[off++] = 0x5e; ph[off++] = 0x00;        /* 600dpi = 0x005e */
