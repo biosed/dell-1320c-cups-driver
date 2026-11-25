@@ -32,12 +32,23 @@ DISTNAME := dell-1320c-cups-driver-$(OS)-$(ARCH)-v$(VERSION)
 
 FILTERS := FXM_PF FXM_MF FXM_PM2FXR FXM_SBP FXM_PR FXM_CC FXM_ALC FXM_HBPL
 
+ifneq ($(wildcard $(SRCDIR)/FXM_PF.c),)
 all: check-deps $(addprefix $(BINDIR)/,$(FILTERS))
+else
+all: check-prebuilt
+endif
 
 check-deps:
 	@command -v $(CC) >/dev/null 2>&1 || { echo "Missing compiler: $(CC)" >&2; exit 1; }
 	@command -v $(CUPS_CONFIG) >/dev/null 2>&1 || { echo "Missing cups-config (install CUPS development files)" >&2; exit 1; }
-	@command -v $(GS) >/dev/null 2>&1 || { echo "Missing Ghostscript runtime ($(GS)) required by scripts/FXM_PS2PM" >&2; exit 1; }
+	@PATH="$$PATH:/opt/homebrew/bin:/usr/local/bin:/opt/local/bin" command -v $(GS) >/dev/null 2>&1 || { echo "Missing Ghostscript runtime ($(GS)) required by scripts/FXM_PS2PM" >&2; exit 1; }
+
+check-prebuilt:
+	@for f in $(addprefix $(BINDIR)/,$(FILTERS)); do \
+		test -x "$$f" || { echo "Missing prebuilt filter: $$f" >&2; exit 1; }; \
+	done
+	@PATH="$$PATH:/opt/homebrew/bin:/usr/local/bin:/opt/local/bin" command -v $(GS) >/dev/null 2>&1 || \
+		echo "WARNING: Ghostscript ($(GS)) not found in PATH; install ghostscript before printing." >&2
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
@@ -67,8 +78,9 @@ $(BINDIR)/FXM_HBPL: $(SRCDIR)/FXM_HBPL.c | $(BINDIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(CUPS_CFLAGS) -o $@ $(SRCDIR)/FXM_HBPL.c $(LDFLAGS) $(CUPS_LIBS)
 
 install: all
-	install -d $(DESTDIR)$(PREFIX)/filter
-	install -d $(DESTDIR)$(PPD_DIR)
+	install -d -m 755 $(DESTDIR)$(PREFIX)
+	install -d -m 755 $(DESTDIR)$(PREFIX)/filter
+	install -d -m 755 $(DESTDIR)$(PPD_DIR)
 	install -m 755 $(BINDIR)/FXM_PF $(DESTDIR)$(PREFIX)/filter/FXM_PF
 	install -m 755 $(BINDIR)/FXM_MF $(DESTDIR)$(PREFIX)/filter/FXM_MF
 	install -m 755 $(BINDIR)/FXM_PM2FXR $(DESTDIR)$(PREFIX)/filter/FXM_PM2FXR
@@ -78,15 +90,37 @@ install: all
 	install -m 755 $(BINDIR)/FXM_ALC $(DESTDIR)$(PREFIX)/filter/FXM_ALC
 	install -m 755 $(BINDIR)/FXM_HBPL $(DESTDIR)$(PREFIX)/filter/FXM_HBPL
 	install -m 755 $(SCRIPTDIR)/FXM_PS2PM $(DESTDIR)$(PREFIX)/filter/FXM_PS2PM
-	install -m 644 ppd/Dell-1320c.ppd $(DESTDIR)$(PPD_DIR)/Dell-1320c.ppd
+	sed -e 's|/opt/Dell1320|$(PREFIX)|g' -e 's|/Library/Printers/Dell|$(PREFIX)|g' ppd/Dell-1320c.ppd > $(DESTDIR)$(PPD_DIR)/Dell-1320c.ppd
+	chmod 644 $(DESTDIR)$(PPD_DIR)/Dell-1320c.ppd
+ifeq ($(OS),Darwin)
+	@xattr -cr $(DESTDIR)$(PREFIX) $(DESTDIR)$(PPD_DIR)/Dell-1320c.ppd 2>/dev/null || true
+	@if [ -z "$(DESTDIR)" ] && [ "$$(id -u)" = "0" ]; then \
+		chown -R root:wheel $(PREFIX) && \
+		chown root:wheel $(PPD_DIR) $(PPD_DIR)/Dell-1320c.ppd && \
+		chmod 755 $(PREFIX) $(PREFIX)/filter $(PPD_DIR); \
+	fi
+	@if [ -z "$(DESTDIR)" ] && ! grep -q "^Sandboxing Relaxed" /etc/cups/cups-files.conf 2>/dev/null; then \
+		printf '\nNOTE: macOS CUPS sandboxing blocks Ghostscript in Homebrew (/opt/homebrew/bin/gs).\n'; \
+		printf 'Run the following commands if printing fails with status 126 ("Operation not permitted"):\n'; \
+		printf '  grep -q "^Sandboxing Relaxed" /etc/cups/cups-files.conf || echo "Sandboxing Relaxed" | sudo tee -a /etc/cups/cups-files.conf\n'; \
+		printf '  sudo launchctl kickstart -k system/org.cups.cupsd\n\n'; \
+	fi
+else
+	@if [ -z "$(DESTDIR)" ] && [ "$$(id -u)" = "0" ]; then \
+		chown -R root:root $(PREFIX) && \
+		chown root:root $(PPD_DIR) $(PPD_DIR)/Dell-1320c.ppd && \
+		chmod 755 $(PREFIX) $(PREFIX)/filter $(PPD_DIR); \
+	fi
+endif
 
 dist: all
 	rm -rf $(DISTDIR)/$(DISTNAME)
 	mkdir -p $(DISTDIR)/$(DISTNAME)/bin $(DISTDIR)/$(DISTNAME)/ppd $(DISTDIR)/$(DISTNAME)/scripts
 	cp -a $(BINDIR)/. $(DISTDIR)/$(DISTNAME)/bin/
 	cp -a $(SCRIPTDIR)/FXM_PS2PM $(DISTDIR)/$(DISTNAME)/scripts/
-	cp -a ppd/Dell-1320c.ppd $(DISTDIR)/$(DISTNAME)/ppd/
-	cp -a README.md INSTALL.md install.sh $(DISTDIR)/$(DISTNAME)/
+	sed -e 's|/opt/Dell1320|$(PREFIX)|g' -e 's|/Library/Printers/Dell|$(PREFIX)|g' ppd/Dell-1320c.ppd > $(DISTDIR)/$(DISTNAME)/ppd/Dell-1320c.ppd
+	chmod 644 $(DISTDIR)/$(DISTNAME)/ppd/Dell-1320c.ppd
+	cp -a Makefile README.md INSTALL.md install.sh $(DISTDIR)/$(DISTNAME)/
 	tar -C $(DISTDIR) -czf $(DISTDIR)/$(DISTNAME).tar.gz $(DISTNAME)
 	$(SHA256SUM) $(DISTDIR)/$(DISTNAME).tar.gz > $(DISTDIR)/$(DISTNAME).tar.gz.sha256
 
@@ -95,4 +129,4 @@ clean:
 
 DESTDIR ?=
 
-.PHONY: all check-deps install dist clean
+.PHONY: all check-deps check-prebuilt install dist clean

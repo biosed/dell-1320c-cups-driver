@@ -61,16 +61,25 @@ make
 sudo make install
 ```
 
-Installs filters to `/Library/Printers/Dell/filter` and PPD to `/Library/Printers/PPDs/Dell/Dell-1320c.ppd`.
+Installs filters to `/Library/Printers/Dell/filter` and PPD to `/Library/Printers/PPDs/Dell/Dell-1320c.ppd` (with PPD filter paths rewritten to `/Library/Printers/Dell`, `root:wheel` ownership, `755`/`644` permissions, and Gatekeeper quarantine cleared).
+
+Because macOS CUPS sandboxes print filters and blocks launching Homebrew binaries such as `/opt/homebrew/bin/gs` (failing with status 126 / "Operation not permitted"), relax the CUPS sandbox and restart `cupsd` (this applies to all CUPS filters on the Mac):
+```bash
+grep -q "^Sandboxing Relaxed" /etc/cups/cups-files.conf || echo "Sandboxing Relaxed" | sudo tee -a /etc/cups/cups-files.conf
+sudo launchctl kickstart -k system/org.cups.cupsd
+```
 
 ### Pre-built binaries
 
-Download the tarball for your platform from the [latest release](https://github.com/biosed/dell-1320c-cups-driver/releases/latest), extract it, and run `sudo make install` from the extracted directory.
+Download the tarball for your platform from the [latest release](https://github.com/biosed/dell-1320c-cups-driver/releases/latest), extract it, and run `sudo make install` from the extracted directory. This installs the filters and PPD, rewrites PPD filter paths to `PREFIX`, sets `root:wheel` (macOS) or `root:root` (Linux) ownership and `755`/`644` permissions, and clears macOS Gatekeeper quarantine (`xattr -cr`).
+
+On macOS, install Ghostscript (`brew install ghostscript`) and relax the CUPS sandbox using the `Sandboxing Relaxed` commands above. If you copy files manually instead of running `sudo make install`, clear quarantine and set CUPS ownership yourself (`sudo xattr -cr /Library/Printers/Dell /Library/Printers/PPDs/Dell && sudo chown -R root:wheel /Library/Printers/Dell /Library/Printers/PPDs/Dell`).
 
 ### Custom paths
 
 ```bash
-make PREFIX=/custom/filter/root PPD_DIR=/custom/ppd/dir
+make
+sudo make install PREFIX=/custom/filter/root PPD_DIR=/custom/ppd/dir
 ```
 
 ## Add the printer

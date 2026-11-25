@@ -21,6 +21,8 @@ This repository provides the second option.
 
 ## Install the driver files
 
+### Linux
+
 ```bash
 make check-deps
 make
@@ -32,15 +34,38 @@ That installs:
 - filters into `/opt/Dell1320/filter`
 - PPD into `/usr/share/ppd/Dell/Dell-1320c.ppd`
 
+### macOS
+
+Install CUPS and Ghostscript via Homebrew (`brew install cups ghostscript`), then:
+
+```bash
+make check-deps
+make
+sudo make install
+```
+
+That installs:
+
+- filters into `/Library/Printers/Dell/filter`
+- PPD into `/Library/Printers/PPDs/Dell/Dell-1320c.ppd` (with PPD filter paths rewritten to `/Library/Printers/Dell`, `root:wheel` ownership, `755`/`644` permissions, and Gatekeeper quarantine cleared via `xattr -cr`)
+
+Next, relax the macOS CUPS sandbox so filters can execute `/opt/homebrew/bin/gs` (otherwise jobs fail with status 126 / "Operation not permitted"; this setting applies to all CUPS filters on the Mac):
+
+```bash
+grep -q "^Sandboxing Relaxed" /etc/cups/cups-files.conf || echo "Sandboxing Relaxed" | sudo tee -a /etc/cups/cups-files.conf
+sudo launchctl kickstart -k system/org.cups.cupsd
+```
+
 ## Add the printer from the CUPS GUI
 
-After `make install`, open your printer settings / CUPS web UI and add the printer normally.
+After `make install`, open your printer settings / CUPS web UI (or **System Settings > Printers & Scanners** on macOS) and add the printer normally.
 
 When asked for the driver/model:
 
 - choose the Dell 1320c PPD if it appears in the model list, or
 - browse to:
-  - `/usr/share/ppd/Dell/Dell-1320c.ppd`
+  - Linux: `/usr/share/ppd/Dell/Dell-1320c.ppd`
+  - macOS: `/Library/Printers/PPDs/Dell/Dell-1320c.ppd`
 
 Recommended defaults:
 
@@ -49,12 +74,23 @@ Recommended defaults:
 
 ## Add the printer from the command line
 
-Example:
+Linux example:
 
 ```bash
 sudo lpadmin -p Dell1320c -E \
   -v "usb://Dell/Color%20Laser%201320c?serial=YOUR_SERIAL" \
   -P /usr/share/ppd/Dell/Dell-1320c.ppd
+
+sudo lpadmin -p Dell1320c -o Option1=1Tray-S -o FXInputSlot=1stTray-S
+sudo lpoptions -d Dell1320c
+```
+
+macOS example:
+
+```bash
+sudo lpadmin -p Dell1320c -E \
+  -v "usb://Dell/Color%20Laser%201320c?serial=YOUR_SERIAL" \
+  -P /Library/Printers/PPDs/Dell/Dell-1320c.ppd
 
 sudo lpadmin -p Dell1320c -o Option1=1Tray-S -o FXInputSlot=1stTray-S
 sudo lpoptions -d Dell1320c
