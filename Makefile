@@ -3,7 +3,7 @@ CPPFLAGS ?=
 LDFLAGS ?=
 CUPS_CONFIG ?= cups-config
 GS ?= gs
-VERSION ?= 0.1.3
+VERSION ?= 0.1.4
 
 OS := $(shell uname -s)
 ARCH := $(shell uname -m)

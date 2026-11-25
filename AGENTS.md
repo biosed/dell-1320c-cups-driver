@@ -12,7 +12,7 @@ sudo make install
 
 - Deps: C compiler, CUPS dev headers (`libcups2-dev` Debian / `cups-devel` Fedora / `cups` via Homebrew on macOS), Ghostscript (`gs`, build-time check and runtime dep of `FXM_PS2PM`).
 - Install paths are platform-dependent (see `Makefile`): Linux `PREFIX=/opt/Dell1320` + `PPD_DIR=/usr/share/ppd/Dell`; macOS `/Library/Printers/Dell` + `/Library/Printers/PPDs/Dell`.
-- Overrides: `make PREFIX=... PPD_DIR=...`, plus `DESTDIR=` for staging. `VERSION` defaults to `0.1.3` and names the `make dist` tarball (`dist/dell-1320c-cups-driver-<OS>-<ARCH>-v<VERSION>.tar.gz` + `.sha256`). `make dist` includes `Makefile` and `Makefile` supports pre-built binary installs when `src/` is absent.
+- Overrides: `make PREFIX=... PPD_DIR=...`, plus `DESTDIR=` for staging. `VERSION` defaults to `0.1.4` and names the `make dist` tarball (`dist/dell-1320c-cups-driver-<OS>-<ARCH>-v<VERSION>.tar.gz` + `.sha256`). `make dist` includes `Makefile` and `Makefile` supports pre-built binary installs when `src/` is absent.
 - `install.sh` detects Linux vs macOS defaults and accepts `PREFIX=`/`PPD_DIR=` env overrides (`make && sudo make install ...`).
 - CI (`.github/workflows/build.yml`) only runs `make all` + `make dist` on ubuntu/macos. Release (`release.yml`) triggers on `v*` tags. There is no test or lint step — verify with a build.
 
