@@ -1,7 +1,13 @@
 #!/bin/sh
-prefix=/usr
-exec_prefix=${prefix}
-bindir=${exec_prefix}/bin
+# CUPS runs filters with a restricted PATH that omits Homebrew/MacPorts on macOS.
+PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:/usr/bin"
+export PATH
+
+GS_BIN="$(command -v gs 2>/dev/null || true)"
+if [ -z "$GS_BIN" ] || [ ! -x "$GS_BIN" ]; then
+    echo "ERROR: FXM_PS2PM: Ghostscript (gs) not found in PATH ($PATH)" >&2
+    exit 127
+fi
 
 GS_FONTPATH="$CUPS_FONTPATH"
 export GS_FONTPATH
@@ -15,17 +21,19 @@ gsopts="$gsopts -dNOMEDIAATTRS -sDEVICE=ppmraw -sstdout=%stderr"
 # input and never scales up undersized input.
 resolution="600"
 profile=""
+set -f
 for option in $5; do
     case $option in
         FXOutputMode=300x300) resolution="300" ;;
         FXOutputMode=*) resolution="600" ;;
-        profile=*) profile="-scupsProfile=$(echo $option | awk -F= '{print $2}')" ;;
+        profile=*) profile="-scupsProfile=${option#profile=}" ;;
     esac
 done
+set +f
 gsopts="$gsopts -r$resolution"
 
-if test -z "$6"; then
-    $bindir/gs $gsopts -sOUTPUTFILE="%stdout" $profile -
+if [ -z "$6" ]; then
+    exec "$GS_BIN" $gsopts -sOUTPUTFILE="%stdout" ${profile:+"$profile"} -
 else
-    cat "$6" | $bindir/gs $gsopts -sOUTPUTFILE="%stdout" $profile -
+    exec "$GS_BIN" $gsopts -sOUTPUTFILE="%stdout" ${profile:+"$profile"} - < "$6"
 fi
